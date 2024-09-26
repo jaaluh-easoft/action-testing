@@ -37,16 +37,31 @@ jobs:
         id: get_commit_hash
         run: echo "COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
+      - name: Create Archive
+        run: |
+          zip -r release.zip . -x "*.git*" "*.github/*" "path/to/exclude/*"
+
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="release-${{ env.COMMIT_HASH }}"
-          RELEASE_NAME="Release for commit $TAG_NAME"
-          BODY="This release is based on commit $TAG_NAME."
+          TAG_NAME="release-${{ github.run_id }}"
+          RELEASE_NAME="Release for $TAG_NAME"
+          BODY="This release includes an archive of the repository."
 
-          curl -X POST \
+          # Create the release
+          RELEASE_RESPONSE=$(curl -s -X POST \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/${{ github.repository }}/releases \
-            -d "{\"tag_name\": \"$TAG_NAME\", \"name\": \"$RELEASE_NAME\", \"body\": \"$BODY\"}"
+            -d "{\"tag_name\": \"$TAG_NAME\", \"name\": \"$RELEASE_NAME\", \"body\": \"$BODY\"}")
+
+          # Extract the release ID
+          RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+
+          # Upload the archive as a release asset
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/zip" \
+            --data-binary @release.zip \
+            "https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=release.zip"
