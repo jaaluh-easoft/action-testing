@@ -26,11 +26,23 @@ jobs:
       - uses: actions/checkout@v4
 
       # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      #- name: Run a one-line script
+      #  run: echo Hello, world!
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Get current commit hash
+        id: get_commit_hash
+        run: echo "COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          TAG_NAME="release-${{ env.COMMIT_HASH }}"
+          RELEASE_NAME="Release for commit $TAG_NAME"
+          BODY="This release is based on commit $TAG_NAME."
+
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/releases \
+            -d "{\"tag_name\": \"$TAG_NAME\", \"name\": \"$RELEASE_NAME\", \"body\": \"$BODY\"}"
