@@ -1,53 +1,34 @@
-# This is a basic workflow to help you get started with Actions
-
-name: make-release
+name: upload-release-asset
 
 permissions:
   contents: write  # For accessing the repository contents
-  packages: write  # For creating releases
+  packages: write  # For managing release assets
 
-# Controls when the workflow will run
+# Trigger the workflow when a new release is created
 on:
-  push:
-    tags:
-      - 'V*'
+  release:
+    types: 
+      - created
 
-  # Allows you to run this workflow manually from the Actions tab
-  #workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  upload:
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      # Checkout the repository
       - uses: actions/checkout@v4
 
+      # Create the archive (ZIP file)
       - name: Create Archive
         run: |
           zip -r release.zip . -x "*.git*" "*.github/*" "path/to/exclude/*"
 
-      - name: Create Release
+      # Upload the archive as an asset to the created release
+      - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
-          RELEASE_NAME="Release for $TAG_NAME"
-          BODY="Release $TAG_NAME"
-
-          # Create the release
-          RELEASE_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/releases \
-            -d "{\"tag_name\": \"$TAG_NAME\", \"name\": \"$RELEASE_NAME\", \"body\": \"$BODY\"}")
-
-          # Extract the release ID
-          RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+          RELEASE_ID="${{ github.event.release.id }}"
 
           # Upload the archive as a release asset
           curl -X POST \
