@@ -8,11 +8,9 @@ permissions:
 
 # Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
-  #push:
-  #  branches: [ "main" ]
-  #pull_request:
-  #  branches: [ "main" ]
+  push:
+    tags:
+      - 'V*'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -29,14 +27,6 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
-      #- name: Run a one-line script
-      #  run: echo Hello, world!
-
-      - name: Get current commit hash
-        id: get_commit_hash
-        run: echo "COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
-
       - name: Create Archive
         run: |
           zip -r release.zip . -x "*.git*" "*.github/*" "path/to/exclude/*"
@@ -45,9 +35,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="release-${{ github.run_id }}"
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
           RELEASE_NAME="Release for $TAG_NAME"
-          BODY="This release includes an archive of the repository."
+          BODY="Release $TAG_NAME"
 
           # Create the release
           RELEASE_RESPONSE=$(curl -s -X POST \
