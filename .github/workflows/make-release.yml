@@ -6,33 +6,16 @@ permissions:
 
 # Trigger the workflow when a new release is created
 on:
-  release:
-    types: 
-      - created
+  workflow_dispatch:
+    inputs:
+       environment:
+        type: environment
 
 jobs:
   upload:
+    environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repository
-      - uses: actions/checkout@v4
-
-      # Create the archive (ZIP file)
-      - name: Create Archive
-        run: |
-          zip -r release.zip . -x "*.git*" "*.github/*" "path/to/exclude/*"
-
-      # Upload the archive as an asset to the created release
-      - name: Upload Release Asset
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RELEASE_ID="${{ github.event.release.id }}"
-
-          # Upload the archive as a release asset
-          curl -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Content-Type: application/zip" \
-            --data-binary @release.zip \
-            "https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=release.zip"
+      - name: Print env stuff
+        run: echo ${{ secrets.TEST_ENV }}
